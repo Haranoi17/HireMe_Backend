@@ -40,7 +40,7 @@ namespace HireMe_Backend.Tests
                 var usersController = new UsersController(dbContext);
                 var userToPost = new RegisterUserDto() { Email = "mockUser@email.com", Name = "MockUser", Password = "1234" };
                 var expectedResponse = new Dictionary<string, bool>{
-                    {"email", true }, { "name", true}, { "password", false} };
+                    {"email", true }, { "name", true }, { "password", false } };
 
                 //when
                 var result = await usersController.Post(userToPost) as BadRequestObjectResult;
@@ -64,7 +64,7 @@ namespace HireMe_Backend.Tests
                 var userToPost = new RegisterUserDto() { Email = "mockUser@email.com", Name = "MockUser", Password = "12345" };
 
                 var expectedResponse = new Dictionary<string, bool>{
-                    {"email", false }, { "name", true}, { "password", true} };
+                    {"email", false }, { "name", true }, { "password", true } };
 
                 //when
                 dbContext.users.Add(new Models.User() { Id = Guid.NewGuid(), Email = userToPost.Email, Name = "userName", Password = "123456" });
@@ -91,7 +91,7 @@ namespace HireMe_Backend.Tests
                 var userToPost = new RegisterUserDto() { Email = "mockUser@email.com", Name = "MockUser", Password = "12345" };
 
                 var expectedResponse = new Dictionary<string, bool>{
-                    {"email", true}, { "name", false}, { "password", true} };
+                    {"email", true}, { "name", false }, { "password", true } };
 
                 //when
                 dbContext.users.Add(new Models.User() { Id = Guid.NewGuid(), Email = "different@email.com", Name = userToPost.Name, Password = "123456" });
