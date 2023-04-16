@@ -25,7 +25,7 @@ namespace HireMe_Backend.Tests
                 //then
                 Assert.Equal(readUser.Name, userToPost.Name);
                 Assert.Equal(readUser.Email, userToPost.Email);
-                Assert.Equal(readUser.Password, usersController.HashUserPassword(userToPost.Password));
+                Assert.Equal(readUser.Password, Models.User.hashPassword(userToPost.Password));
             }
         }
 

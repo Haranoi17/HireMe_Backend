@@ -3,8 +3,6 @@ using HireMe_Backend.Models;
 using HireMe_Backend.Models.DTOS;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace HireMe_Backend.Controllers
 {
@@ -26,14 +24,6 @@ namespace HireMe_Backend.Controllers
             return Ok(dbContext.users);
         }
 
-        public string HashUserPassword(string password)
-        {
-            var sha = SHA256.Create();
-            var passwordAsByteArray = Encoding.Default.GetBytes(password);
-            var hashedPassword = sha.ComputeHash(passwordAsByteArray);
-            return Convert.ToBase64String(hashedPassword);
-        }
-
         [HttpPost]
         public async Task<IActionResult> Post(RegisterUserDto registerDto)
         {
@@ -42,7 +32,7 @@ namespace HireMe_Backend.Controllers
                 return BadRequest(userValidator.getMessages(registerDto));
             }
 
-            var newUser = new User() { Id = Guid.NewGuid(), Name = registerDto.Name, Email = registerDto.Email, Password = HashUserPassword(registerDto.Password) };
+            var newUser = new User() { Id = Guid.NewGuid(), Name = registerDto.Name, Email = registerDto.Email, Password = registerDto.Password };
             await dbContext.users.AddAsync(newUser);
             await dbContext.SaveChangesAsync();
             return RedirectToAction("Get");
