@@ -1,4 +1,5 @@
-﻿using HireMe_Backend.Models;
+﻿using HireMe_Backend.Controllers.UserValidators;
+using HireMe_Backend.Models;
 using HireMe_Backend.Models.DTOS;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -11,17 +12,21 @@ namespace HireMe_Backend.Controllers
     [Route("/api/[controller]")]
     public class UsersController : ControllerBase
     {
-        private readonly ApplicationDbContext db;
+        private readonly ApplicationDbContext dbContext;
+        private readonly RegisterUserValidator userValidator;
 
-        public UsersController(ApplicationDbContext db) { this.db = db; }
+        public UsersController(ApplicationDbContext dbContext) { 
+            this.dbContext = dbContext; 
+            this.userValidator = new RegisterUserValidator(dbContext); 
+        }
 
         [HttpGet]
         public async Task<IActionResult> Get()
         {
-            return Ok(db.users);
+            return Ok(dbContext.users);
         }
 
-        public string HashUserPassword(string password) 
+        public string HashUserPassword(string password)
         {
             var sha = SHA256.Create();
             var passwordAsByteArray = Encoding.Default.GetBytes(password);
@@ -32,24 +37,28 @@ namespace HireMe_Backend.Controllers
         [HttpPost]
         public async Task<IActionResult> Post(RegisterUserDto registerDto)
         {
+            if (!userValidator.isUserValid(registerDto)) 
+            {
+                return BadRequest(userValidator.getMessages(registerDto));
+            }
 
-            var newUser = new User() { Id = Guid.NewGuid(), Name = registerDto.Name, Email = registerDto.Email, Password=HashUserPassword(registerDto.Password) };
-            await db.users.AddAsync(newUser);
-            await db.SaveChangesAsync();
+            var newUser = new User() { Id = Guid.NewGuid(), Name = registerDto.Name, Email = registerDto.Email, Password = HashUserPassword(registerDto.Password) };
+            await dbContext.users.AddAsync(newUser);
+            await dbContext.SaveChangesAsync();
             return RedirectToAction("Get");
         }
 
         [HttpDelete]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var users = db.users.Where(user => user.Id == id).ToList();
+            var users = dbContext.users.Where(user => user.Id == id).ToList();
             var exists = !users.IsNullOrEmpty();
 
             if (exists)
             {
                 var user = users.First();
-                db.users.Remove(user);
-                await db.SaveChangesAsync();
+                dbContext.users.Remove(user);
+                await dbContext.SaveChangesAsync();
                 return Ok("user deleted");
             }
 
