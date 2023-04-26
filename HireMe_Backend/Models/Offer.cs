@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Runtime.InteropServices;
 
@@ -14,6 +15,9 @@ namespace HireMe_Backend.Models
         public string Title { get; init; }
         public string ImageUrl { get; init; }
         public string Description { get; init; }
-        public float prize { get; init; }
+        public float Prize { get; init; }
+
+        [ForeignKey("AspNetUsers")]
+        public Guid UserId { get; init; }
     }
 }

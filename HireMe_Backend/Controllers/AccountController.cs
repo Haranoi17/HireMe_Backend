@@ -1,7 +1,9 @@
-﻿using HireMe_Backend.Models.DTOS;
+﻿using HireMe_Backend.Models;
+using HireMe_Backend.Models.DTOS;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace HireMe_Backend.Controllers
 {
@@ -9,10 +11,10 @@ namespace HireMe_Backend.Controllers
     [Route("/api/[controller]")]
     public class AccountController : Controller
     {
-        private readonly UserManager<IdentityUser> userManager;
-        private readonly SignInManager<IdentityUser> signInManager;
+        private readonly UserManager<ApplicationUser> userManager;
+        private readonly SignInManager<ApplicationUser> signInManager;
 
-        public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager)
+        public AccountController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
         {
             this.userManager = userManager;
             this.signInManager = signInManager;
@@ -21,40 +23,48 @@ namespace HireMe_Backend.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterUserDto registerUserDto)
         {
-            var user = new IdentityUser() { UserName = registerUserDto.Name, Email = registerUserDto.Email };
+            var user = new ApplicationUser() { UserName = registerUserDto.Name, Email = registerUserDto.Email };
 
             var result = await userManager.CreateAsync(user, registerUserDto.Password);
 
             if (result.Succeeded)
             {
-                await signInManager.SignInAsync(user, isPersistent: false);
+                List<Claim> claims = new List<Claim>(){
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim(ClaimTypes.Name, user.UserName)
+            };
+                await signInManager.SignInWithClaimsAsync(user, isPersistent: false, claims);
                 return Ok(Json("Registered successfully"));
             }
 
             return BadRequest(Json(result.Errors));
         }
 
-        [HttpPost("checkCookie")]
-        public async Task<IActionResult> CheckCookie()
-        {
-            var result = Request.Cookies.ContainsKey(".AspNetCore.Identity.Application");
-            return Ok(Json(result));
-        }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginUserDto loginUserDto)
         {
-            var user = new IdentityUser() { UserName = loginUserDto.Name };
+            var user = await userManager.FindByNameAsync(loginUserDto.Name);
 
-            var result = await signInManager.PasswordSignInAsync(user.UserName, loginUserDto.Password, isPersistent: false, lockoutOnFailure: false);
+            if (user == null)
+            {
+                return BadRequest(Json("Wrong credentials"));
+            }
+
+            var result = await signInManager.CheckPasswordSignInAsync(user, loginUserDto.Password, lockoutOnFailure: false);
 
             if (result.Succeeded)
             {
-                await signInManager.SignInAsync(user, isPersistent: false);
+                List<Claim> claims = new List<Claim>(){
+                    new Claim(ClaimTypes.NameIdentifier, user.Id),
+                    new Claim(ClaimTypes.Name, user.UserName)
+                };
+
+                await signInManager.SignInWithClaimsAsync(user, isPersistent: false, claims);
                 return Ok(Json("User logged in"));
             }
 
-            return BadRequest(Json("Wrong credentials"));
+            return BadRequest(Json("Something wrong"));
         }
 
         [HttpPost("logout")]
@@ -63,6 +73,12 @@ namespace HireMe_Backend.Controllers
             await signInManager.SignOutAsync();
 
             return Ok(Json("Logged out"));
+        }
+
+        [HttpPost("isLoggedIn")]
+        public async Task<IActionResult> CheckIfLoggedIn()
+        {
+            return Ok(Json(User.Identity.IsAuthenticated));
         }
 
         [HttpGet("user")]

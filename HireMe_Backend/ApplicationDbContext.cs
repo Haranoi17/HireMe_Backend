@@ -12,6 +12,7 @@ namespace HireMe_Backend
         {
         }
 
-        public DbSet<Offer> offers { get; set; }
+        public DbSet<ApplicationUser> users { get; set; }
+        public DbSet<Offer> Offers { get; set; }
     }
 }
