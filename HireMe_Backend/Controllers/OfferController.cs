@@ -13,22 +13,22 @@ namespace HireMe_Backend.Controllers
     [Route("api/[controller]")]
     public class OfferController : Controller
     {
-        private readonly ApplicationDbContext context;
+        private readonly ApplicationDbContext dbContext;
         private readonly UserManager<ApplicationUser> userManager;
         public OfferController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
-            this.context = context;
+            this.dbContext = context;
             this.userManager = userManager;
         }
 
-        [HttpPost]
-        public async Task<IActionResult> CreateOffer(CreateOfferDto offerDto)
+        [HttpPost("create")]
+        public async Task<IActionResult> CreateOffer( [FromBody] CreateOfferDto offerDto)
         {
-            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
-            var offer = new Offer() { Id = Guid.NewGuid(), Description = offerDto.Description, ImageUrl = offerDto.ImageUrl, Prize = offerDto.Prize, Title = offerDto.Title, UserId = Guid.Parse(currentUserId) };
+            var currentUser = getCurrentlyLoggedInApplicationUser().Result;
+            var offer = new Offer() { Id = Guid.NewGuid(), Description = offerDto.Description, ImageUrl = offerDto.ImageUrl, Prize = offerDto.Prize, Title = offerDto.Title, User = currentUser };
 
-            var result = await context.Offers.AddAsync(offer);
-            await context.SaveChangesAsync();
+            var result = await dbContext.Offers.AddAsync(offer);
+            await dbContext.SaveChangesAsync();
 
             return Ok(offer);
         }
@@ -38,8 +38,11 @@ namespace HireMe_Backend.Controllers
         {
             try
             {
-                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
-                var result = await context.Offers.Where(offer => offer.UserId == Guid.Parse(currentUserId)).ToListAsync();
+                var currentUser = getCurrentlyLoggedInApplicationUser().Result;
+                
+                var offers = currentUser.Offers.ToList();
+                var result = offers.ConvertAll(offer=>new OfferWithMinimalUserDto(offer));
+
                 return Ok(result);
             }
             catch (Exception ex)
@@ -48,11 +51,29 @@ namespace HireMe_Backend.Controllers
             }
         }
 
+        [HttpGet("owner/{offerId}")]
+        public async Task<IActionResult> GetOfferOwner([FromQuery] Guid offerId)
+        {
+            var offer = await dbContext.Offers.FindAsync(offerId);
+
+            var result = new OfferWithMinimalUserDto(offer);
+            return Ok(result);
+        }
+
+
         [HttpGet("all")]
         public async Task<IActionResult> GetAllOffers()
         {
-            var result = await context.Offers.ToListAsync();
+            var offers = await dbContext.Offers.ToListAsync();
+            var result = offers.ConvertAll(offer => new OfferWithMinimalUserDto(offer));
             return Ok(result);
+        }
+
+        private async Task<ApplicationUser> getCurrentlyLoggedInApplicationUser() 
+        {
+            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
+            var currentUser = await dbContext.Users.Where(user => user.Id == currentUserId).FirstAsync() as ApplicationUser;
+            return currentUser;
         }
     }
 }

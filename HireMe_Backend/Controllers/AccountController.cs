@@ -21,7 +21,7 @@ namespace HireMe_Backend.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterUserDto registerUserDto)
+        public async Task<IActionResult> Register([FromBody] RegisterUserDto registerUserDto)
         {
             var user = new ApplicationUser() { UserName = registerUserDto.Name, Email = registerUserDto.Email };
 
@@ -29,10 +29,13 @@ namespace HireMe_Backend.Controllers
 
             if (result.Succeeded)
             {
-                List<Claim> claims = new List<Claim>(){
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Name, user.UserName)
-            };
+                List<Claim> claims = new List<Claim>()
+                {
+                    new Claim(ClaimTypes.NameIdentifier, user.Id),
+                    new Claim(ClaimTypes.Name, user.UserName),
+                    new Claim(ClaimTypes.Email, user.Email)
+                };
+
                 await signInManager.SignInWithClaimsAsync(user, isPersistent: false, claims);
                 return Ok(Json("Registered successfully"));
             }
@@ -42,7 +45,7 @@ namespace HireMe_Backend.Controllers
 
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login(LoginUserDto loginUserDto)
+        public async Task<IActionResult> Login([FromBody] LoginUserDto loginUserDto)
         {
             var user = await userManager.FindByNameAsync(loginUserDto.Name);
 
@@ -84,8 +87,24 @@ namespace HireMe_Backend.Controllers
         [HttpGet("user")]
         public async Task<IActionResult> getUser()
         {
-            return Ok(Json(User.Identity.Name));
+            var user = await userManager.GetUserAsync(User);
+            var minimalUser = new MinimalUserDto(user);
+            return Ok(minimalUser);
         }
 
+        [HttpPut("update")]
+        public async Task<IActionResult> UpdateUser([FromBody] MinimalUserDto minimalUser)
+        {
+            var user = await userManager.GetUserAsync(User);
+            user.AvatarUrl = minimalUser.AvatarUrl;
+            var result = await userManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+            {
+                return BadRequest();
+            }
+
+            return Ok();
+        }
     }
 }
